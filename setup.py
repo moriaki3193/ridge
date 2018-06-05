@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 setup(
     name='ridge',
     version='0.0.1',
-    description='Python Machine Learning Library specialized in L2R and Recommendation.'
+    description='Python Machine Learning Library specialized in L2R and Recommendation.',
     author='Moriaki Saigusa',
     author_email='moriaki3193@gmail.com',
     install_requires=[],
