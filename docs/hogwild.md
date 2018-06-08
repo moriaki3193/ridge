@@ -1,3 +1,24 @@
+<style>
+p {
+    color: #373F51;
+}
+p.latex {
+    text-align: center;
+    background-color: #D8DBE2;
+    color: #1B1C1E;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+</style>
+
+<!-- 
+#D8DBE2
+#A9B5D1
+#5772AF
+#373F51
+#1B1C1E
+-->
+
 # Hodwild!
 このメモは[1]の翻訳記事に近いものである．
 Field-aware Factorization Machineの実装の一つである[2]では，モデルの学習プロセスを高速化する為にHogwild!の手法を利用している．
@@ -48,34 +69,34 @@ end loop
 私と読者の間で共通の認識ができるように，ここでは以降の説明で利用する記法について説明したい．
 線形回帰モデル*f*は，*n*次元の実数ベクトル`x`を入力として受け取り，実数`y`を以下のような式を通じて出力する．
 
-```TeX
-f(\mathbf{x}) = \mathbf{w} \cdot \mathbf{x}
-```
+<p class='latex'>
+    f(<b>x</b>) = <b>w</b>・<b>x</b>
+</p>
 
 上の式における`w`が、このモデルにおいて学習させたい重みのベクトルである．
-損失関数としては，$2$乗誤差を利用し，データセットの一つの事例に対する損失は次のように書き表すことができる．
+損失関数としては，2乗誤差を利用し，データセットの一つの事例に対する損失は次のように書き表すことができる．
 
-```TeX
-l(\mathbf{x}, y) = \left(f(\mathbf{x}) - y\right)^{2}
-```
+<p class='latex'>
+    <i>l</i>(<b>x</b>, y) = {f(<b>x</b>) - y}<sup>2</sup>
+</p>
 
 確率的勾配降下法を通じてモデルを学習させるために，以下のように勾配更新ステップを計算する必要がある．
 
-```TeX
-\mathbf{w}_{t+1} = \mathbf{w}_{t} - \lambda G_{w}(\mathbf{x}, y)
-```
+<p class='latex'>
+    <b>w</b><sub>t+1</sub> = <b>w</b><sub>t</sub> - λG<sub><b>w</b></sub>(<b>x</b>, y)
+</p>
 
-ここでいう$\lambda$とは学習率であり，$G_{w}$は損失$l$の$\mathbf{w}$についての勾配の期待値である．すなわち
+ここでいうλとは学習率であり，G<sub><b>w</b></sub>は損失<i>l</i>の<b>w</b>についての勾配の期待値である．すなわち
 
-```TeX
-\mathcal{E}[G_{w}(\mathbf{x}, y)] = \nabra_{w}l(\mathbf{x}, y)
-```
+<p class='latex'>
+    E[G<sub><b>w</b></sub>(<b>x</b>, y)] = ∇<sub><b>w</b></sub>(<b>x</b>, y)
+</p>
 
-特に，損失が$2$乗誤差である場合には，次のように計算できる．
+特に，損失が2乗誤差である場合には，次のように計算できる．
 
-```TeX
-G_{\mathbf{w}}(\mathbf{w}, y) = -2 \left(\mathbf{w}\cdot\mathbf{x} - y)\mathbf{x} \in \mathcal{R}
-```
+<p class='latex'>
+    G<sub><b>w</b></sub>(<b>x</w>, y) = -2(<b>w</b>・<b>x</b> - y)<b>x</b> ∈ R<sup>n</sup>
+</p>
 
 ## Generating our Training Data
 
