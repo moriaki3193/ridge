@@ -3,6 +3,9 @@ import numpy as np
 from tqdm import tqdm
 from numpy.linalg import norm
 
+# from ridge.src import gradient_steps
+import gradient_steps
+
 
 class MatFac:
     """Matrix Factorization
@@ -64,16 +67,7 @@ class MatFac:
         # [START Fitting]
         pbar = tqdm(total=n_iter) if verbose else None
         for _epoch in range(n_iter):
-            errors = []
-            for i in range(n_users):
-                for j in np.nonzero(ratings[i, :])[0]:
-                    p = self.P[:, i]
-                    q = self.Q[:, j]
-                    residue = ratings[i, j] - np.dot(p, q)
-                    for f in range(k):
-                        self.P[f][i] += alpha * (2 * residue * self.Q[f][j])
-                        self.Q[f][j] += alpha * (2 * residue * self.P[f][i])
-                    errors.append(residue)
+            self.P, self.Q, errors = gradient_steps.mf(ratings, self.P, self.Q, alpha)
             loss = self._calc_loss(errors, l2)
             if verbose:
                 pbar.update(1)

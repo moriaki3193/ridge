@@ -7,7 +7,7 @@ Named after my favorite racing game `R4`.
 
 ## Directories
 | name | descripiton |
-|:----:|:-----------:|
+|:----:|:------------|
 | ridge | Model implementation |
 | docs | Documents (usage of this package & memo related to implementation) |
 | tests | Model test suites |
@@ -15,7 +15,10 @@ Named after my favorite racing game `R4`.
 
 ## Models
 ### Matrix Factorization
-WIP
+#### Performance
+- MovieLens 100k
+  - with Cython 17m20s (1000epochs)
+  - with Python 28m38s (1000epochs)
 
 ### Factorization Machine
 WIP
