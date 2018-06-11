@@ -66,9 +66,7 @@ class MatFac:
         for _epoch in range(n_iter):
             errors = []
             for i in range(n_users):
-                for j in range(n_items):
-                    if ratings[i][j] == 0:
-                        continue
+                for j in np.nonzero(ratings[i, :])[0]:
                     p = self.P[:, i]
                     q = self.Q[:, j]
                     residue = ratings[i, j] - np.dot(p, q)
