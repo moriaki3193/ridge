@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from setuptools import setup, find_packages
-from Cython.Build import cythonize
+from setuptools import setup, find_packages, Extension
 from Cython.Distutils import build_ext
 
+
+ext_modules = [Extension('ridge.racer.gradient_steps', ['ridge/racer/gradient_steps.pyx'])]
 
 setup(
     name='ridge',
@@ -16,6 +17,6 @@ setup(
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
     cmdclass={'build_ext': build_ext},
-    ext_modules=cythonize(['src/*.pyx']),
+    ext_modules=ext_modules,
     include_dirs=[np.get_include()],
 )

@@ -2,9 +2,7 @@
 import numpy as np
 from tqdm import tqdm
 from numpy.linalg import norm
-
-# from ridge.src import gradient_steps
-import gradient_steps
+from ridge.racer import gradient_steps
 
 
 class MatFac:

@@ -9,9 +9,9 @@ Named after my favorite racing game `R4`.
 | name | descripiton |
 |:----:|:------------|
 | ridge | Model implementation |
+| ridge.racer | Cython optimization |
 | docs | Documents (usage of this package & memo related to implementation) |
 | tests | Model test suites |
-| src | Cython implementation |
 
 ## Models
 ### Matrix Factorization
