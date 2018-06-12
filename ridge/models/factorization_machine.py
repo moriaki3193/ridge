@@ -2,6 +2,7 @@
 import logging
 import numpy as np
 from tqdm import tqdm
+from scipy import sparse
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -80,7 +81,7 @@ class FacMac:
         for f in range(self.k):
             shared_term = np.sum([V_cur[j, f] * x[j] for j in nonzero_ind])
             for i in nonzero_ind:
-                if 0 <= i < p:
+                if 0 <= i < self.p:
                     continue
                 x_i = x[i]
                 V_if = V_cur[i, f]
@@ -200,6 +201,101 @@ class FacMac:
                 obs = y_train[m]
                 pred = predict_one(features)
                 update_params(features, obs - pred)
+        # [END Fitting]
+
+        return self
+
+
+class FaFacMac:
+    """Field-aware Factorization Machine.
+
+    Parameters
+    ----------
+    k : int, a hyper-param of Factorization Machines.
+    V : dict of np.array, whose key is the field,
+        and shape of its value is (n_features, k).
+    """
+
+    def __init__(self):
+        self.k = None
+        self.V = None
+        self.G = None
+        self.l2 = None
+        self.eta = None
+
+    def _inspect_structure(self, X):
+        """Inspect dataset X and extract its shape.
+
+        Return
+        ------
+        shape : tuple of int, n_samples, n_features, n_fields.
+        """
+        n_samples, n_features, n_fields = (0, 0, 0)
+        if type(X) == np.ndarray and X.ndim == 3:
+            n_samples, n_features, n_fields = X.shape
+        elif type(X) == list or type(X) == np.ndarray:
+            n_samples = len(X)
+            n_features, n_fields = X[0].shape
+        return (n_samples, n_features, n_fields)
+
+    def _initialize_params(self, n_features, n_fields, k, l2, eta):
+        """Initializing the parameters.
+        """
+        self.k = k
+        self.l2 = l2
+        self.eta = eta
+        self.V = {field_id: np.random.normal(scale=1e-2, size=(n_features, k))
+                  for field_id in range(n_fields)}
+        self.G = np.ones((n_features, n_fields, k))
+
+    def _predict_one(self, x):
+        """Prediction with a given feature.
+
+        Parameters
+        ----------
+        x : np.array OR sparse.coo_matrix
+            whose shape are (n_features, n_fields).
+        """
+        if type(x) == sparse.coo_matrix:
+            x = x.toarray()
+
+    def _update_params(self, x, obs, pred):
+        if type(x) == sparse.coo_matrix:
+            x = x.toarray()
+
+    def fit(self, X_train, y_train, k=8,
+            l2=0.02, eta=1e-2, n_iter=1000):
+        """Fitting using the given X_train & y_train.
+
+        Employing AdaGrad so as to fit efficiently.
+
+        Parameters
+        ----------
+        X_train : np.array or array-like of sparse.coo_matrix.
+            Its shape is (n_samples, n_features, n_fields).
+        y_train : np.array, whose shape is (n_samples, ).
+            Each value in y_train has to be 0 or 1.
+        k : int, a hyper-param of Factorization Machine.
+            Default to 8.
+        l2 : float, L2 regularization term.
+            Default to 0.02.
+        eta : float, initial learning rate of AdaGrad.
+            Default to 1e-2 (0.01).
+        n_iter : int, the number of iteration. A.k.a epochs.
+            Default to 1000.
+        """
+        n_samples, n_features, n_fields = self._inspect_structure(X_train)
+        self._initialize_params(n_features, n_fields, k, l2, eta)
+
+        # [START Fitting]
+        sample_indices = [_i for _i in range(n_samples)]
+        for _epoch in tqdm(range(n_iter)):
+            np.random.shuffle(sample_indices)  # shuffle
+            for m in sample_indices:
+                x = X_train[m]
+                obs = y_train[m]
+                pred = self._predict_one(x)
+                self._update_params(x, obs, pred)
         # [END Fitting]
 
         return self
