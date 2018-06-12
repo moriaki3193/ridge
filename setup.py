@@ -8,7 +8,7 @@ ext_modules = [Extension('ridge.racer.gradient_steps', ['ridge/racer/gradient_st
 
 setup(
     name='ridge',
-    version='0.0.1',
+    version='0.0.2',
     description='Python Machine Learning Library specialized in L2R and Recommendation.',
     author='Moriaki Saigusa',
     author_email='moriaki3193@gmail.com',
