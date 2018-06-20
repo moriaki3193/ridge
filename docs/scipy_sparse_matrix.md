@@ -118,6 +118,39 @@ coo.toarray()
 #        [0, 0, 0, 1]])
 ```
 
+## scipy.sparse.csr_matrix
+行方向に圧縮された疎行列の形式．
+
+```Python
+from scipy.sparse import csr_matrix
+
+s = csr_matrix(S)  # 他の形式の疎行列を利用した生成
+
+# 標準的なCSR形式の表現方法
+# `i'行に含まれる列方向のインデックスは
+# `indices[indptr[i]:indptr[i+1]]
+# に格納され，それらに対応する値は
+# data[indptr[i]:indptr[i+1]]
+# に格納される．
+# shapeパラメータが与えられていない場合は，
+# インデックス配列から推定される．
+indptr = np.array([0, 2, 3, 6])
+indices = np.array([0, 2, 2, 0, 1, 2])
+data = np.array([1, 2, 3, 4, 5, 6])
+csr_matrix((data, indices, indptr), shape=(3, 3)).todense()
+# matrix([[1, 0, 2],
+#         [0, 0, 3],
+#         [4, 5, 6]])
+```
+
+### Note
+種々の算術演算をサポートしている．
+
+#### CSR形式の利点
+- `CSR` + `CSR`や`CSR` * `CSR`などの演算が高速．
+- 行方向のスライシングが高速．
+- ベクトルとの内積演算が高速．
+
 ## その他のTips
 ### 疎行列のままdump & read
 ```Python
@@ -128,4 +161,9 @@ loaded_sparse = np.load('sparse_matrix.npy')
 ### 疎行列を密行列に変換する
 ```Python
 dense = sparse.todense()
+```
+
+### 非0の要素数を取得する
+```Python
+print(sparse_mat.nnz)  # → 非0の要素数を出力
 ```
