@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+import logging
 import unittest
 import numpy as np
 import pandas as pd
 from os import path
 from tqdm import tqdm
 from scipy import sparse
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 GROUP_KEY = 'rid'
@@ -15,6 +19,11 @@ PATH2OUTPUT = path.join(path.dirname(path.abspath(__file__)), 'tmp', 'sparse_fea
 class TestVectorize(unittest.TestCase):
 
     def test_construct_sparse_matrix(self):
+        """Construct a sparse matrices of the horse racing dataset.
+
+        What will be saved after running this suite
+        -------------------------------------------
+        """
         df = pd.read_csv(PATH2FEATURES)
         unique_hnames = df['hname'].unique()
         hname2ind = pd.get_dummies(unique_hnames)
@@ -24,7 +33,9 @@ class TestVectorize(unittest.TestCase):
         n_horses = len(unique_hnames)
         features = sparse.coo_matrix((n_horses, 0), dtype=np.int8)
         grouped = df[~df[GROUP_KEY].isin(invalid_rids)].groupby(GROUP_KEY)
+
         pbar = tqdm(total=len(grouped))
+        pbar.set_description('Constructing Sparse Matrix...')
         for idx, (_, rdata) in enumerate(grouped):
             entries = rdata['hname']
             n_entries = len(entries)
@@ -59,6 +70,14 @@ class TestVectorize(unittest.TestCase):
             pbar.update(1)
         pbar.close()
         # [END Construct Competitor & Entity Index Vector]
+
+        logging.info('---' * 20)
+        logging.info(' Dataset Stats')
+        logging.info(f' + The number of races: {len(grouped)}')
+        logging.info(f' + The number of horses: {n_horses}')
+        logging.info(f' + Shape of sparse matrix: {features.shape}')
+        logging.info(f' + The number of nonzero elems: {features.nnz}')
+        logging.info('---' * 20)
 
         self.assertEqual(features.dtype, np.int8)
         np.save(PATH2OUTPUT, features)
