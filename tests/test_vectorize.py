@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
 import unittest
 import numpy as np
 import pandas as pd
@@ -8,12 +7,9 @@ from tqdm import tqdm
 from scipy import sparse
 
 
-logging.basicConfig(level=logging.INFO)
-
-
 GROUP_KEY = 'rid'
 PATH2FEATURES = path.join(path.dirname(path.abspath(__file__)), 'data', 'features.csv')
-PATH2OUTPUT = path.join(path.dirname(path.abspath(__file__)), 'tmp', 'sparse_features')
+PATH2OUTPUT = path.join(path.dirname(path.abspath(__file__)), 'tmp', 'sparse_features.npz')
 
 
 class TestVectorize(unittest.TestCase):
@@ -28,14 +24,17 @@ class TestVectorize(unittest.TestCase):
         unique_hnames = df['hname'].unique()
         hname2ind = pd.get_dummies(unique_hnames)
         invalid_rids = df[df['odds'] == 0][GROUP_KEY].unique()
+        context_cols = ['n_presi', 'n_avgsi4', 'n_disavgsi', 'n_goavgsi',
+                        'w2c', 'eps', 'draw', 'newdis',
+                        'jnowin', 'jwinper', 'jst1miss']
 
         # [START Construct Competitor & Entity Index Vector]
         n_horses = len(unique_hnames)
-        features = sparse.coo_matrix((n_horses, 0), dtype=np.int8)
+        indexing_features = sparse.coo_matrix((0, 2 * n_horses), dtype=np.int8)
         grouped = df[~df[GROUP_KEY].isin(invalid_rids)].groupby(GROUP_KEY)
 
         pbar = tqdm(total=len(grouped))
-        pbar.set_description('Constructing Sparse Matrix...')
+        pbar.set_description('Constructing Indexing Matrix...')
         for idx, (_, rdata) in enumerate(grouped):
             entries = rdata['hname']
             n_entries = len(entries)
@@ -66,21 +65,45 @@ class TestVectorize(unittest.TestCase):
                     self.assertEqual(target_ind, ind_as_entity - n_horses)
             # [END Assertion]
 
-            features = sparse.vstack([features, index_matrix])  # TODO the greater idx is, the slower...
+            indexing_features = sparse.vstack([indexing_features, index_matrix])  # TODO the greater idx is, the slower...
             pbar.update(1)
         pbar.close()
         # [END Construct Competitor & Entity Index Vector]
 
-        logging.info('---' * 20)
-        logging.info(' Dataset Stats')
-        logging.info(f' + The number of races: {len(grouped)}')
-        logging.info(f' + The number of horses: {n_horses}')
-        logging.info(f' + Shape of sparse matrix: {features.shape}')
-        logging.info(f' + The number of nonzero elems: {features.nnz}')
-        logging.info('---' * 20)
+        # [START Construct Context Vector]
+        n_contexts = len(context_cols)
+        context_features = sparse.coo_matrix((0, n_contexts))
+        pbar2 = tqdm(total=len(grouped))
+        pbar2.set_description('Constructing Context Matrix ...')
+        for idx, (_, rdata) in enumerate(grouped):
+            context_matrix = sparse.coo_matrix(rdata[context_cols].values)
+            context_features = sparse.vstack([context_features, context_matrix])
+            pbar2.update(1)
+        pbar2.close()
+        # [END Construct Context Vector]
 
-        self.assertEqual(features.dtype, np.int8)
-        np.save(PATH2OUTPUT, features)
+
+        # Finally, concat indexing_features & context_features
+        features = sparse.hstack((indexing_features, context_features))
+
+        print('---' * 20)
+        print('Summary')
+        print(f'+ The number of races: {len(grouped)}')
+        print(f'+ The number of horses: {n_horses}')
+        print('Indexing Matrix Stats')
+        print(f'+ Shape of sparse matrix: {indexing_features.shape}')
+        print(f'+ The number of nonzero elems: {indexing_features.nnz}')
+        print('Context Matrix Stats')
+        print(f'Shape of dense matrix: {context_features.shape}')
+        print('---' * 20)
+
+        # Unit Testing
+        self.assertEqual(indexing_features.dtype, np.int8)
+        self.assertEqual(indexing_features.shape[0], context_features.shape[0])
+        self.assertEqual(features.shape[1], indexing_features.shape[1] + context_features.shape[1])
+
+        # Save the features
+        sparse.save_npz(PATH2OUTPUT, features)
 
 
 if __name__ == '__main__':
