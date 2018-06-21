@@ -42,7 +42,7 @@ class FacMac:
         self.l2 = l2
         self.b = 0.0
         self.w = np.zeros(n_features)
-        self.V = np.random.normal(scale=0.01, size=(n_features, k))
+        self.V = np.random.normal(scale=1e-2, size=(n_features, k))
 
     def _update_params(self, x, residue):
         """Update parameters using Stochastic Gradient Descent method.
@@ -238,5 +238,131 @@ class CDFacMac:
     """Combination-Dependent Factorization Machine
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, type_X=np.ndarray):
+        self.type_X = type_X
+        self.n_entities = None
+        self.k = None
+        self.b = None
+        self.w = None
+        self.V = None
+        self.l2 = None
+        self.eta = None
+
+    def _extract_feature_row(self, X, m):
+        if self.type_X == sparse.csr_matrix:
+            return np.squeeze(np.asarray(X[m].todense()))
+        elif self.type_X == np.ndarray:
+            return X[m]
+
+    def _initialize_params(self, n_entities, n_features, k, l2):
+        self.n_entities = n_entities
+        self.k = k
+        self.l2 = l2
+        self.b = 0.0
+        self.w = np.zeros(n_features)
+        self.V = np.random.normal(scale=1e-2, size=(n_features, k))
+
+    def _update_params(self, x, residue):
+        """Update parameters using Stochastic Gradient Descent method.
+        """
+        nonzero_ind = np.nonzero(x)[0]
+        self.b = self.b + self.eta * (residue - self.l2 * self.b)
+        self.w = self.w + self.eta * (residue * x - self.l2 * self.w)
+        V_cur = self.V
+        self.V -= self.l2 * self.V  # L2 Regularize in advance
+        for f in range(self.k):
+            shared_term = np.sum([V_cur[j, f] * x[j] for j in nonzero_ind])
+            for i in nonzero_ind:
+                x_i = x[i]
+                V_if = V_cur[i, f]
+                partial = x_i * shared_term - V_if * np.power(x_i, 2)
+                self.V[i, f] = V_if + self.eta * residue * partial
+
+    def _predict_one(self, x):
+        """A prediction with a given feature vector.
+
+        Utilizing Original Factorization Machine.
+
+        Parameters
+        ----------
+        x : ndarray, whose shape is (n_features, )
+
+        Return
+        ------
+        y_pred : float, a predicted target value.
+        """
+        nonzero_ind = np.nonzero(x)[0]
+        pointwise_score = np.dot(self.w[nonzero_ind], x[nonzero_ind])
+        pairwise_scores = []
+        for f in range(self.k):
+            sum_squared = []
+            squared_sum = []
+            for i in nonzero_ind:
+                x_i = x[i]
+                V_if = self.V[i, f]
+                sum_squared.append(V_if * x_i)
+                squared_sum.append(np.power(x_i, 2) * np.power(V_if, 2))
+            sum_squared = np.power(np.sum(sum_squared), 2)
+            squared_sum = np.sum(squared_sum)
+            pairwise_scores.append(sum_squared - squared_sum)
+        # [START Revome Noises]
+        pairwise_noises = [0.0]
+        for idx, i in enumerate(nonzero_ind):
+            if idx >= len(nonzero_ind) - 1:
+                break
+            j = nonzero_ind[idx + 1]
+            if j < self.n_entities:
+                pairwise_noises.append(np.dot(self.V[i], self.V[j]))
+        # [END Revome Noises]
+        return self.b + pointwise_score + 0.5 * np.sum(pairwise_scores) - np.sum(pairwise_noises)
+
+    def predict(self, X_test):
+        """A prediction with given feature vectors.
+
+        Parameters
+        ----------
+        X_test : ndarray, whose shape is (n_tests, n_features).
+
+        Return
+        ------
+        y_pred : ndarray, whose shape is (n_tests, ).
+        """
+        n_samples, _ = X_test.shape
+        y_pred = []
+
+        # [START Predict one by one]
+        for m in range(n_samples):
+            x = self._extract_feature_row(X_test, m)
+            this_y_pred = self._predict_one(x)
+            y_pred.append(this_y_pred)
+        # [END Predict one by one]
+
+        return np.array(y_pred)
+
+    def fit(self, X_train, y_train, n_entities,
+            k=8, l2=0.02, eta=1e-3, n_iter=1000):
+        """Parameter fitting.
+
+        Parameters
+        ----------
+        X_train : sparse.csr_matrix or ndarray,
+                  whose shape is (n_samples, n_features).
+        y_train : ndarray, whose shape is (n_samples, ).
+        n_iter  : int, the maximum number of iteration.
+        n_entities : int, the number of entities.
+        """
+        n_samples, n_features = X_train.shape
+        self._initialize_params(n_entities, n_features, k, l2)
+        # [START Fitting]
+        self.eta = eta
+        sample_indices = [i for i in range(n_samples)]
+        for _epoch in tqdm(range(n_iter)):
+            np.random.shuffle(sample_indices)
+            for m in sample_indices:
+                features = self._extract_feature_row(X_train, m)
+                obs = y_train[m]
+                pred = self._predict_one(features)
+                self._update_params(features, obs - pred)
+        # [END Fitting]
+
+        return self
