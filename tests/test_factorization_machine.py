@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-import logging
 import unittest
 import numpy as np
 from tqdm import tqdm
 from scipy import sparse
 from ridge.models import FacMac
-
-
-logging.basicConfig(level=logging.DEBUG)
 
 
 class TestFM(unittest.TestCase):
@@ -32,7 +28,7 @@ class TestFM(unittest.TestCase):
         X_test = self.X[5:, :]
         y_test = self.y[5:]
 
-        logging.debug('Fitting FM with np.ndarray')
+        print('Fitting FM with np.ndarray')
         model = FacMac().fit(X_train, y_train, k=4, n_iter=1000)
         print(f'pred: {model.predict(X_test)}')
         print(f'obs[0] : {y_test[0]}')
@@ -45,8 +41,9 @@ class TestFM(unittest.TestCase):
         X_test = sparse_X[5:, :]
         y_test = self.y[5:]
 
-        logging.debug('Fitting FM with sparse.csr_matrix')
+        print('Fitting FM with sparse.csr_matrix')
         model = FacMac(type_X=sparse.csr_matrix).fit(X_train, y_train, k=4, n_iter=1000)
+        print(f'type of X_train: {type(X_train)}')
         print(f'pred: {model.predict(X_test)}')
         print(f'obs[0] : {y_test[0]}')
         print(f'obs[1] : {y_test[1]}')
