@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pickle
 import unittest
 import numpy as np
 import pandas as pd
@@ -8,8 +9,13 @@ from scipy import sparse
 
 
 GROUP_KEY = 'rid'
-PATH2FEATURES = path.join(path.dirname(path.abspath(__file__)), 'data', 'features.csv')
-PATH2OUTPUT = path.join(path.dirname(path.abspath(__file__)), 'tmp', 'sparse_features.npz')
+TARGET_KEY = 'fp_std'
+BASEDIR = path.dirname(path.abspath(__file__))
+PATH2FEATURES = path.join(BASEDIR, 'data', 'features.csv')
+FEATURES_OUTPUT = path.join(BASEDIR, 'tmp', 'horseracing_sparse_features.npz')
+TARGETS_OUTPUT = path.join(BASEDIR, 'tmp', 'horseracing_targets.npy')
+RACEIDS_OUTPUT = path.join(BASEDIR, 'tmp', 'horseracing_raceids.pkl')
+TRAIN_SIZE = 0.8
 
 
 class TestVectorize(unittest.TestCase):
@@ -21,6 +27,7 @@ class TestVectorize(unittest.TestCase):
         -------------------------------------------
         """
         df = pd.read_csv(PATH2FEATURES)
+        df.astype({GROUP_KEY: str})
         unique_hnames = df['hname'].unique()
         hname2ind = pd.get_dummies(unique_hnames)
         invalid_rids = df[df['odds'] == 0][GROUP_KEY].unique()
@@ -70,22 +77,35 @@ class TestVectorize(unittest.TestCase):
         pbar.close()
         # [END Construct Competitor & Entity Index Vector]
 
-        # [START Construct Context Vector]
+        # [START Construct Context Vector & Target]
+        n_train_rows = 0  # ← MAX Train data index
         n_contexts = len(context_cols)
         context_features = sparse.coo_matrix((0, n_contexts))
+        target_series = []
+        raceid_series = []
         pbar2 = tqdm(total=len(grouped))
         pbar2.set_description('Constructing Context Matrix ...')
         for idx, (_, rdata) in enumerate(grouped):
             context_matrix = sparse.coo_matrix(rdata[context_cols].values)
             context_features = sparse.vstack([context_features, context_matrix])
+            target_series += rdata[TARGET_KEY].values.tolist()
+            raceid_series += rdata[GROUP_KEY].values.tolist()
+            # [START Get Train Test Split Index]
+            if idx == np.round(TRAIN_SIZE * len(grouped)):
+                n_train_rows, _ = context_features.shape
+            # [END Get Train Test Split Index]
             pbar2.update(1)
         pbar2.close()
-        # [END Construct Context Vector]
+        # [END Construct Context Vector & Target]
 
 
         # Finally, concat indexing_features & context_features
         features = sparse.hstack((indexing_features, context_features))
+        target_series = np.asarray(target_series)
+        with open(RACEIDS_OUTPUT, mode='wb') as fp:
+            pickle.dump(raceid_series, fp)
 
+        # Display Stats
         print('---' * 20)
         print('Summary')
         print(f'+ The number of races: {len(grouped)}')
@@ -95,15 +115,21 @@ class TestVectorize(unittest.TestCase):
         print(f'+ The number of nonzero elems: {indexing_features.nnz}')
         print('Context Matrix Stats')
         print(f'Shape of dense matrix: {context_features.shape}')
+        print('Train Test Split')
+        print(f'+ Maximum Train data row index: {n_train_rows}')
         print('---' * 20)
 
         # Unit Testing
         self.assertEqual(indexing_features.dtype, np.int8)
         self.assertEqual(indexing_features.shape[0], context_features.shape[0])
         self.assertEqual(features.shape[1], indexing_features.shape[1] + context_features.shape[1])
+        self.assertEqual(features.shape[0], len(target_series))
+        self.assertEqual(len(target_series), len(raceid_series))
 
-        # Save the features
-        sparse.save_npz(PATH2OUTPUT, features)
+        # Save the features & targets
+        sparse.save_npz(FEATURES_OUTPUT, features)
+        np.save(TARGETS_OUTPUT, target_series)
+        np.save(RACEIDS_OUTPUT, raceid_series)
 
 
 if __name__ == '__main__':
