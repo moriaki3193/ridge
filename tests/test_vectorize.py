@@ -102,8 +102,6 @@ class TestVectorize(unittest.TestCase):
         # Finally, concat indexing_features & context_features
         features = sparse.hstack((indexing_features, context_features))
         target_series = np.asarray(target_series)
-        with open(RACEIDS_OUTPUT, mode='wb') as fp:
-            pickle.dump(raceid_series, fp)
 
         # Display Stats
         print('---' * 20)
@@ -129,7 +127,8 @@ class TestVectorize(unittest.TestCase):
         # Save the features & targets
         sparse.save_npz(FEATURES_OUTPUT, features)
         np.save(TARGETS_OUTPUT, target_series)
-        np.save(RACEIDS_OUTPUT, raceid_series)
+        with open(RACEIDS_OUTPUT, mode='wb') as fp:
+            pickle.dump(raceid_series, fp)
 
 
 if __name__ == '__main__':

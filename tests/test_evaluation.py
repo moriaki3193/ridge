@@ -55,7 +55,7 @@ class TestEvaluation(unittest.TestCase):
         X_test = features[n_train_rows:]
         y_test = targets[n_train_rows:]
         # [START Iteratively Fitting the model]
-        for this_k in range(2, 3):
+        for this_k in range(4, 5):
             # model = FacMac(type_X=sparse.csr_matrix).fit(X_train, y_train, k=this_k, n_iter=N_ITER, eta=1e-4)
             model = CDFacMac(type_X=sparse.csr_matrix).fit(X_train, y_train, N_ENTITIES, k=this_k, n_iter=N_ITER, eta=1e-4)
             y_pred = model.predict(X_test)
@@ -74,7 +74,7 @@ class TestEvaluation(unittest.TestCase):
                 print(f'Prediction Samples: {y_pred[idx]}')
                 print('---' * 20)
             # [END Display Stats]
-            path2output = path.join(PATH2TEMP, f'pred-k{model.k}-L2{len(str(model.eta))-2}-iter{N_ITER}.npy')
+            path2output = path.join(PATH2TEMP, f'pred-k{model.k}-L2{len(str(model.eta))-2}-iter{N_ITER}-CDFM.npy')
             np.save(path2output, y_pred)
         # [END Iteratively Fitting the model]
 
