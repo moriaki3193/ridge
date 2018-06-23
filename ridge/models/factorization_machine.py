@@ -34,6 +34,20 @@ class FMClassifier:
         """
         self.loss_series = np.zeros(n_iter)
 
+    def _update_loss_series(self, epoch, X, y):
+        """Append Cross Entropy Loss to `loss_series'.
+        """
+        loss = 0.0
+        y_nnz_ind = np.nonzero(y)[0]
+        y_z_ind = np.where(y == 0)[0]
+        for i in y_nnz_ind:
+            proba = self._predict_proba(X[i])
+            loss -= np.log(proba)
+        for j in y_z_ind:
+            proba = self._predict_proba(X[j])
+            loss -= np.log(1.0 - proba)
+        self.loss_series[epoch] = loss
+
     def _initialize_params(self, n_features, k, l2, eta):
         """Initialize parameters of this model.
         """
@@ -138,6 +152,7 @@ class FMClassifier:
                 obs = y[m]
                 self._update_params(row, obs)
             self.eta = eta / (epoch + 1)
+            self._update_loss_series(epoch, X, y)
             if verbose:
                 pbar.update(1)
         pbar.close()
