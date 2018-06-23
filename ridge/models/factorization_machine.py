@@ -8,6 +8,164 @@ from scipy import sparse
 logging.basicConfig(level=logging.DEBUG)
 
 
+class FMClassifier:
+    """Factorization Machines for Classification.
+
+    Features of this model.
+    -----------------------
+    + L2 Regularization.
+    + Probability prediction.
+    + Memoize a series of loss.
+    + (Locally) Optimized logistic loss.
+    + Probabilistic Approximation of learning rate (a.k.a Robbins-Monro).
+    """
+
+    def __init__(self):
+        self.k = None
+        self.b = None
+        self.w = None
+        self.V = None
+        self.l2 = None
+        self.eta = None
+        self.loss_series = None
+
+    def _initialize_loss_series(self, n_iter):
+        """Initialize a series of loss when fitting.
+        """
+        self.loss_series = np.zeros(n_iter)
+
+    def _initialize_params(self, n_features, k, l2, eta):
+        """Initialize parameters of this model.
+        """
+        self.k = k
+        self.b = 0.0
+        self.w = np.zeros(n_features)
+        self.V = np.random.normal(scale=1e-2, size=(n_features, k))
+        self.l2 = l2
+        self.eta = eta
+
+    def _update_params(self, x, y):
+        """Update parameters of this model.
+
+        Employing Stochastic Gradient Descent algorithm
+        with Robbins-Monro method.
+
+        Parameters
+        ----------
+        x : np.ndarray, whose shape is (n_features, )
+        y : int {0, +1}
+
+        Variables
+        ---------
+        V_cur : Current values of latent matrix V.
+        """
+        z = self._predict_proba(x)
+        coef = z - y
+        self.b -= self.eta * (coef + self.l2 * self.b)
+        self.w -= self.eta * (coef * self.w + self.l2 * self.w)
+        V_cur = self.V
+        for f in np.arange(start=0, stop=self.k):  # TODO 列方向の取り出しは低速なので改良する
+            nnz_ind = np.nonzero(x)[0]
+            shared_term = np.sum([V_cur[j,f] * x[j] for j in nnz_ind])
+            for i in nnz_ind:
+                first_term = x[i] * shared_term
+                second_term = V_cur[i,f] * np.square(x[i])
+                self.V[i,f] -= self.eta * (coef * (first_term - second_term) + self.l2 * V_cur[i,f])
+
+    def __score(self, x):
+        """Scoring with a given feature `x'.
+
+        Parameters
+        ----------
+        x : np.ndarray, whose shape is (n, ).
+
+        Return
+        ------
+        score : float, regression score by FMs.
+        """
+        nonzero_ind = np.nonzero(x)[0]
+        pointwise_score = np.dot(self.w[nonzero_ind], x[nonzero_ind])
+        pairwise_scores = []
+        for f in np.arange(start=0, stop=self.k):
+            sum_squared = []
+            squared_sum = []
+            for i in nonzero_ind:
+                x_i = x[i]
+                V_if = self.V[i, f]
+                sum_squared.append(V_if * x_i)
+                squared_sum.append(np.power(x_i, 2) * np.power(V_if, 2))
+            sum_squared = np.power(np.sum(sum_squared), 2)
+            squared_sum = np.sum(squared_sum)
+            pairwise_scores.append(sum_squared - squared_sum)
+        return self.b + pointwise_score + 0.5 * np.sum(pairwise_scores)
+
+    def _predict_proba(self, x):
+        """Predict probability with a given feature `x'.
+
+        A.k.a Sigmoid function.
+
+        Parameters
+        ----------
+        x : np.ndarray, whose shape is (n_features, ).
+        """
+        return 1 / (1 + np.exp(-self.__score(x)))
+
+    def fit(self, X, y, k=8, l2=1e-2, eta=1e-2, n_iter=1000, verbose=True):
+        """Fitting parameters of this model.
+
+        Parameters
+        ----------
+        X       : np.ndarray, whose shape is (n_samples, n_features).
+        y       : np.ndarray, whose shape is (n_samples, ).
+                  Each element in y must be either {0, +1}.
+        k       : int, a hyper-param of this model. Default to 8.
+        l2      : float, a L2 Regularization term. Default to 1e-2.
+        eta     : float, an initial value of learning rate.
+                  This eta is attenuated as the number of iteration increases.
+        verbose : bool, whether display a progress bar of iteration.
+        """
+        n_samples, n_features = X.shape
+        self._initialize_params(n_features, k, l2, eta)
+        self._initialize_loss_series(n_iter)
+        sample_indices = np.arange(start=0, stop=n_samples)
+        if verbose:
+            pbar = tqdm(total=n_iter)
+            pbar.set_description(f'Fitting')
+        for epoch in np.arange(start=0, stop=n_iter):
+            np.random.shuffle(sample_indices)
+            for m in sample_indices:
+                row = X[m]
+                obs = y[m]
+                self._update_params(row, obs)
+            self.eta = eta / (epoch + 1)
+            if verbose:
+                pbar.update(1)
+        pbar.close()
+        return self
+
+    def predict(self, X, target='0-1'):
+        """Prediction of this model.
+
+        Parameters
+        ----------
+        X : np.ndarray, whose shape is (n_samples, n_features).
+
+        Return
+        ------
+        y_pred : np.ndarray, whose shape is (n_samples, ).
+                 if `target' is 'probability', return estimated probabilities.
+                 otherwise, return a series of {0, +1} values.
+        """
+        if target == 'probability':
+            return np.array([self._predict_proba(x) for x in X])
+        else:
+            probas = np.array([self._predict_proba(x) for x in X])
+            return np.where(probas >= 0.5, 1, 0)
+
+
+##############################################################################
+
+
 class FacMac:
     """2-way Factorization Machine.
 

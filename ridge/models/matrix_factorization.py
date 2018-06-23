@@ -83,3 +83,83 @@ class MatFac:
         p = self.P[:, user_id]
         q = self.Q[:, item_id]
         return np.dot(p, q)
+
+
+class NNMatFac:
+    """Non-Negative Matrix Factorization
+
+    Parameters
+    ----------
+    M : int, a hyper-param, the number of dims of vector S_{d,n}.
+    W : np.ndarray, a latent matrix, whose shape is (D, M).
+    H : np.ndarray, a latent matrix, whose shape is (M, N).
+
+    References
+    ----------
+    + https://papers.nips.cc/paper/1861-algorithms-for-non-negative-matrix-factorization.pdf
+    + https://www.slideshare.net/DaichiKitamura/efficient-initialization-for-nonnegative-matrix-factorization-based-on-nonnegative-independent-component-analysis
+    """
+
+    def __init__(self):
+        self.M = None
+        self.W = None
+        self.H = None
+        self.loss_series = None
+
+    def _initialize_params(self, V, M):
+        """Initialization of parameters.
+
+        Parameters
+        ----------
+        D : int, the number of dims of features.
+        M : int, the number of dims of latent vectors.
+        N : int, the number of dims of samples.
+        """
+        D, N = V.shape
+        self.D = D
+        self.M = M
+        self.N = N
+        # self.W = np.random.rand(D, M)
+        # self.H = np.random.rand(M, N)
+        self.W = np.ones((D, M)) * np.sqrt(np.mean(V.mean() / (D * N)))
+        self.H = np.ones((M, N)) * np.sqrt(np.mean(V.mean() / (D * N)))
+
+    def fit(self, V, M, n_iter=10, verbose=True):
+        """Fitting: Minimize KL divergence.
+
+        Parameters
+        ----------
+        V : np.ndarray or sparse.csr_matrix, whose shape is (D, N).
+        M : int, a hyper-param, the number of dims of vector S_{d,n}.
+        """
+        self._initialize_params(V, M)
+        pbar = None
+        if verbose:
+            pbar = tqdm(total=n_iter)
+            pbar.set_description('Fit. NMF')
+        # [START Decomposition]
+        for _ in range(n_iter):
+            W_cur = self.W  # current W, shape is (D, M)
+            H_cur = self.H  # curretn H, shape is (M, N)
+            WH_cur = np.dot(W_cur, H_cur)  # shape is (D, N)
+            # [START Update H]
+            for m in range(self.M):
+                for n in range(self.N):
+                    numer = np.sum(W_cur[:,m] * (V[:,n] / WH_cur[:,n]))
+                    denom = np.sum(W_cur[:,m])
+                    self.H[m,n] = H_cur[m,n] * (numer / denom)
+            # [END Update H]
+            # [START Update W]
+            for d in range(self.D):
+                for m in range(self.M):
+                    numer = np.sum(H_cur[m,:] * (V[d,:] / WH_cur[d,:]))
+                    denom = np.sum(H_cur[m,:])
+                    self.W[d,m] = W_cur[d,m] * (numer / denom)
+            # [END Update W]
+            if verbose:
+                pbar.update(1)
+        # [END Decomposition]
+        pbar.close()
+
+        return self
+        
