@@ -60,6 +60,8 @@ class TestFMClassifier(unittest.TestCase):
         y_pred = model.predict(X_test, target='0-1')
         # Make Kaggle Submission Data
         pd.DataFrame({'PassengerId': pids, 'Survived': y_pred}).to_csv(path.join(BASEDIR, 'tmp', 'titanic-result.csv'), index=None)
+        # Print Loss Series
+        print(model.loss_series)
 
 
 if __name__ == '__main__':

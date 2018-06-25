@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-import logging
 import numpy as np
 from tqdm import tqdm
 from scipy import sparse
-
-
-logging.basicConfig(level=logging.DEBUG)
 
 
 class FMClassifier:
@@ -181,7 +177,7 @@ class FMClassifier:
 ##############################################################################
 
 
-class FacMac:
+class FMRegressor:
     """2-way Factorization Machine.
 
     Parameters
@@ -310,6 +306,9 @@ class FacMac:
         # [END Fitting]
 
         return self
+
+
+##############################################################################
 
 
 class FaFacMac:
