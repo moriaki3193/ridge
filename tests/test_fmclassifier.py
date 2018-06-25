@@ -56,12 +56,16 @@ class TestFMClassifier(unittest.TestCase):
         y_train = self.train.Survived.values
         X_test = self.test.drop(['PassengerId', 'Pclass', 'Sex'], axis=1).values
         pids = self.test.PassengerId.values
-        model = FMClassifier().fit(X_train, y_train, k=3, l2=1e-1, eta=1e-2, n_iter=300)
+        model = FMClassifier().fit(X_train, y_train, k=3, l2=1e-1, eta=1e-2, n_iter=200)
+        y_train_pred = model.predict(X_train)
+        # Print Loss Series
+        # print(np.mean(model.loss_series))
+        print(model.loss_series)
+        print(accuracy_score(y_train, y_train_pred))
+
         y_pred = model.predict(X_test, target='0-1')
         # Make Kaggle Submission Data
         pd.DataFrame({'PassengerId': pids, 'Survived': y_pred}).to_csv(path.join(BASEDIR, 'tmp', 'titanic-result.csv'), index=None)
-        # Print Loss Series
-        print(model.loss_series)
 
 
 if __name__ == '__main__':

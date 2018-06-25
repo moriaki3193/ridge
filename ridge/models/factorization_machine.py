@@ -2,7 +2,12 @@
 import numpy as np
 from tqdm import tqdm
 from scipy import sparse
-from ridge.racer import loss_calculators
+from ridge.racer import (
+    predictors,
+    gradient_steps,
+    link_functions,
+    loss_calculators,
+)
 
 
 class FMClassifier:
@@ -65,7 +70,7 @@ class FMClassifier:
         z = self._predict_proba(x)
         coef = z - y
         self.b -= self.eta * (coef + self.l2 * self.b)
-        self.w -= self.eta * (coef * self.w + self.l2 * self.w)
+        self.w -= self.eta * (coef * x + self.l2 * self.w)
         V_cur = self.V
         for f in np.arange(start=0, stop=self.k):  # TODO 列方向の取り出しは低速なので改良する
             nnz_ind = np.nonzero(x)[0]
@@ -86,21 +91,7 @@ class FMClassifier:
         ------
         score : float, regression score by FMs.
         """
-        nonzero_ind = np.nonzero(x)[0]
-        pointwise_score = np.dot(self.w[nonzero_ind], x[nonzero_ind])
-        pairwise_scores = []
-        for f in np.arange(start=0, stop=self.k):
-            sum_squared = []
-            squared_sum = []
-            for i in nonzero_ind:
-                x_i = x[i]
-                V_if = self.V[i, f]
-                sum_squared.append(V_if * x_i)
-                squared_sum.append(np.power(x_i, 2) * np.power(V_if, 2))
-            sum_squared = np.power(np.sum(sum_squared), 2)
-            squared_sum = np.sum(squared_sum)
-            pairwise_scores.append(sum_squared - squared_sum)
-        return self.b + pointwise_score + 0.5 * np.sum(pairwise_scores)
+        return predictors.fm(self.b, self.w, self.V, x)
 
     def _predict_proba(self, x):
         """Predict probability with a given feature `x'.
@@ -111,7 +102,7 @@ class FMClassifier:
         ----------
         x : np.ndarray, whose shape is (n_features, ).
         """
-        return 1 / (1 + np.exp(-self.__score(x)))
+        return link_functions.sigmoid(self.__score(x))
 
     def fit(self, X, y, k=8, l2=1e-2, eta=1e-2, n_iter=1000, verbose=True):
         """Fitting parameters of this model.
