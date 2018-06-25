@@ -2,6 +2,7 @@
 import numpy as np
 from tqdm import tqdm
 from scipy import sparse
+from ridge.racer import loss_calculators
 
 
 class FMClassifier:
@@ -33,15 +34,7 @@ class FMClassifier:
     def _update_loss_series(self, epoch, X, y):
         """Append Cross Entropy Loss to `loss_series'.
         """
-        loss = 0.0
-        y_nnz_ind = np.nonzero(y)[0]
-        y_z_ind = np.where(y == 0)[0]
-        for i in y_nnz_ind:
-            proba = self._predict_proba(X[i])
-            loss -= np.log(proba)
-        for j in y_z_ind:
-            proba = self._predict_proba(X[j])
-            loss -= np.log(1.0 - proba)
+        loss = loss_calculators.fm_cross_entropy(self.b, self.w, self.V, X, y)
         self.loss_series[epoch] = loss
 
     def _initialize_params(self, n_features, k, l2, eta):

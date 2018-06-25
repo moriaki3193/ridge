@@ -1,6 +1,9 @@
 import numpy as np
 cimport numpy as np
 
+
+# Gradient Steps.
+
 def mf(np.ndarray ratings, np.ndarray P, np.ndarray Q, float alpha):
     # [START Variable definitions]
     errors = []

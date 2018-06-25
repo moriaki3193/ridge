@@ -4,7 +4,13 @@ from setuptools import setup, find_packages, Extension
 from Cython.Distutils import build_ext
 
 
-ext_modules = [Extension('ridge.racer.gradient_steps', ['ridge/racer/gradient_steps.pyx'])]
+path2src = 'ridge/racer/src/'
+ext_modules = [
+    Extension('ridge.racer.gradient_steps', [path2src + 'gradient_steps.pyx']),
+    Extension('ridge.racer.link_functions', [path2src + 'link_functions.pyx']),
+    Extension('ridge.racer.loss_calculators', [path2src + 'loss_calculators.pyx']),
+    Extension('ridge.racer.predictors', [path2src + 'predictors.pyx']),
+]
 
 setup(
     name='ridge',
@@ -23,4 +29,5 @@ setup(
     cmdclass={'build_ext': build_ext},
     ext_modules=ext_modules,
     include_dirs=[np.get_include()],
+    zip_safe=False,
 )
