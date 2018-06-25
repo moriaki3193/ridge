@@ -1,4 +1,6 @@
 # Specific to this repository
+*.swp
+.DS_Store
 /tests/tmp/
 
 # Byte-compiled / optimized / DLL files
