@@ -82,7 +82,7 @@ end loop
 特に，損失が2乗誤差である場合には，次のように計算できる．
 
 <p class='latex'>
-    G<sub><b>w</b></sub>(<b>x</w>, y) = -2(<b>w</b>・<b>x</b> - y)<b>x</b> ∈ R<sup>n</sup>
+    G<sub><b>w</b></sub>(<b>x</b>, y) = -2(<b>w</b>・<b>x</b> - y)<b>x</b> ∈ R<sup>n</sup>
 </p>
 
 ## Generating our Training Data
