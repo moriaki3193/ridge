@@ -190,15 +190,16 @@ class FMClassifier:
         coef = z - y
         self.b -= self.eta * (coef + self.l2 * self.b)
         self.w -= self.eta * (coef * x + self.l2 * self.w)
-        V_cur = self.V
-        for f in np.arange(start=0, stop=self.k):  # TODO 列方向の取り出しは低速なので改良する
+        Vt = self.V.T
+        for f in np.arange(start=0, stop=self.k):
+            Vt_f = Vt[f, :]
             nnz_ind = np.nonzero(x)[0]
-            shared_term = np.sum([V_cur[j, f] * x[j] for j in nnz_ind])
+            shared_term = np.sum([Vt_f[j] * x[j] for j in nnz_ind])
             for i in nnz_ind:
                 first_term = x[i] * shared_term
-                second_term = V_cur[i, f] * np.square(x[i])
+                second_term = Vt_f[i] * np.square(x[i])
                 nabra = coef * (first_term - second_term)
-                self.V[i, f] -= self.eta * (nabra + self.l2 * V_cur[i, f])
+                self.V[i, f] -= self.eta * (nabra + self.l2 * Vt_f[i])
 
     def __score(self, x):
         """Scoring with a given feature `x'.
