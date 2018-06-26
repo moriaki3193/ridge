@@ -148,6 +148,7 @@ class FMClassifier:
         self.V = None
         self.l2 = None
         self.eta = None
+        self.type_X = None
         self.loss_series = None
 
     def _initialize_loss_series(self, n_iter):
@@ -186,6 +187,7 @@ class FMClassifier:
         ---------
         V_cur : Current values of latent matrix V.
         """
+        x = self.__extract_feature_row(x)
         z = self._predict_proba(x)
         coef = z - y
         self.b -= self.eta * (coef + self.l2 * self.b)
@@ -214,6 +216,12 @@ class FMClassifier:
         """
         return predictors.fm(self.b, self.w, self.V, x)
 
+    def __extract_feature_row(self, x):
+        if self.type_X == sparse.csr_matrix:
+            return np.squeeze(np.asarray(x.todense()))
+        elif self.type_X == np.ndarray:
+            return x
+
     def _predict_proba(self, x):
         """Predict probability with a given feature `x'.
 
@@ -240,6 +248,7 @@ class FMClassifier:
         verbose : bool, whether display a progress bar of iteration.
         """
         n_samples, n_features = X.shape
+        self.type_X = type(X)
         self._initialize_params(n_features, k, l2, eta)
         self._initialize_loss_series(n_iter)
         sample_indices = np.arange(start=0, stop=n_samples)
@@ -253,7 +262,7 @@ class FMClassifier:
                 obs = y[m]
                 self._update_params(row, obs)
             self.eta = eta / (epoch + 1)
-            self._update_loss_series(epoch, X, y)
+            # self._update_loss_series(epoch, X, y)
             if verbose:
                 pbar.update(1)
         pbar.close()
@@ -272,10 +281,15 @@ class FMClassifier:
                  if `target' is 'probability', return estimated probabilities.
                  otherwise, return a series of {0, +1} values.
         """
+        self.type_X = type(X)
+        t_pred = []
+        for x in X:
+            x = self.__extract_feature_row(x)
+            t_pred.append(self._predict_proba(x))
         if target == 'probability':
-            return np.array([self._predict_proba(x) for x in X])
+            return np.array(t_pred)
         else:
-            probas = np.array([self._predict_proba(x) for x in X])
+            probas = np.array(t_pred)
             return np.where(probas >= 0.5, 1, 0)
 
 
