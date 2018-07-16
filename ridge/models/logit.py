@@ -26,8 +26,8 @@ def _validate_input(X: Dataset, w: np.ndarray) -> bool:
     return True
 
 
-class MultinomialLogit:
-    """Multinomial Logit Model
+class ConditionalLogit:
+    """Conditional Logit Model
 
     Most Likelihood Estimation by Gradient Descend Method.
     """
@@ -65,6 +65,7 @@ class MultinomialLogit:
         self.max_iter = max_iter
         self.eta = eta
         self.beta = np.array([0.0]) if self.use_bias else np.array([])
+        self.log_likelihood = np.array([])
 
     def _initialize_beta(self, n_features: int):
         """選択肢の特徴量の次元数に応じて推定するパラメータbetaの初期化を行う．
@@ -80,7 +81,7 @@ class MultinomialLogit:
             P_ast[i] = estimated_probas[w_i] / estimated_probas.sum()
         return P_ast
 
-    def _1_order_diff_coef(self, X: Dataset, w: np.ndarray) -> np.ndarray:
+    def _1_order_diff_coef(self, X: Dataset, w: np.ndarray) -> (np.ndarray, np.ndarray):
         """データセットXについての対数尤度関数のself.betaについての1階微分係数を返す．
 
         Parameters
@@ -96,7 +97,7 @@ class MultinomialLogit:
         # 各事例で選ばれた選択肢の特徴量を束ねた行列を作る
         X_ast: np.matrix = self.const_X_ast(X, w)
         P_ast: np.ndarray = self._calc_P_ast(X, w)
-        return X_ast.dot(1.0 - P_ast)
+        return X_ast.dot(1.0 - P_ast), P_ast
 
     def estimate(self, X: Dataset, w: np.ndarray):
         """Estimation of the parameters.
@@ -112,8 +113,9 @@ class MultinomialLogit:
         n_iter = 0
         while n_iter < self.max_iter:
             np.random.shuffle(X)
-            nabra = self._1_order_diff_coef(X, w)
+            nabra, P_ast = self._1_order_diff_coef(X, w)
             self.beta = self.beta - self.eta * nabra
+            self.log_likelihood = np.append(self.log_likelihood, np.sum(np.log(P_ast)))
             n_iter += 1
 
     def predict(self, X: Dataset):
