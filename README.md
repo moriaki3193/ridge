@@ -14,11 +14,13 @@ Named after my favorite racing game `R4`.
 | tests | Model test suites |
 
 ## Models
-### Matrix Factorization
-#### Performance
+### MFs
+#### MatFac (Matrix Factorization)
 - MovieLens 100k
   - with Cython 17m20s (1000epochs)
   - with Python 28m38s (1000epochs)
 
-### Factorization Machine
-WIP
+### FMs
+#### FMRegressor (Factorization Machine for Regression Tasks)
+
+#### FMClassifier (Factorization Machine for Classification Tasks)

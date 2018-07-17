@@ -1,6 +1,7 @@
 # Specific to this repository
 *.swp
 .DS_Store
+.vscode/
 /tests/tmp/
 
 # Byte-compiled / optimized / DLL files

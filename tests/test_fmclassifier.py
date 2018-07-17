@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from os import path
+from scipy import sparse
 from ridge.models import FMClassifier
 from sklearn.metrics import accuracy_score
 
@@ -56,11 +57,13 @@ class TestFMClassifier(unittest.TestCase):
         y_train = self.train.Survived.values
         X_test = self.test.drop(['PassengerId', 'Pclass', 'Sex'], axis=1).values
         pids = self.test.PassengerId.values
+        # X_train = sparse.lil_matrix(X_train)
+        # X_train = sparse.csr_matrix(X_train)
         model = FMClassifier().fit(X_train, y_train, k=3, l2=1e-1, eta=1e-2, n_iter=200)
         y_train_pred = model.predict(X_train)
         # Print Loss Series
         # print(np.mean(model.loss_series))
-        print(model.loss_series)
+        # print(model.loss_series)
         print(accuracy_score(y_train, y_train_pred))
 
         y_pred = model.predict(X_test, target='0-1')

@@ -149,7 +149,7 @@ class FMClassifier:
         self.l2 = None
         self.eta = None
         self.type_X = None
-        self.loss_series = None
+        # self.loss_series = None
 
     def _initialize_loss_series(self, n_iter):
         """Initialize a series of loss when fitting.
@@ -250,7 +250,7 @@ class FMClassifier:
         n_samples, n_features = X.shape
         self.type_X = type(X)
         self._initialize_params(n_features, k, l2, eta)
-        self._initialize_loss_series(n_iter)
+        # self._initialize_loss_series(n_iter)
         sample_indices = np.arange(start=0, stop=n_samples)
         if verbose:
             pbar = tqdm(total=n_iter)
