@@ -12,19 +12,23 @@ from ridge.racer import (
 class FMRegressor:
     """2-way Factorization Machine.
 
-    Parameters
+    Attributes
     ----------
-    k : int, the hyper-param of FM.
-    b : float, the bias term.
-    w : ndarray, the element-wise weight vector.
+    k : int
+        The hyper-param of FM.
+    b : float
+        The bias term.
+    w : ndarray
+        The element-wise weight vector.
     V : ndarray, whose shape is (n_features, k).
         The weight matrix of pairwise interaction terms.
-    l2 : float, L2 regularization term.
-    eta : float, a.k.a learning rate.
+    l2 : float
+        L2 regularization term.
+    eta : float
+        a.k.a learning rate.
     """
 
-    def __init__(self, type_X=np.ndarray):
-        self.type_X = type_X
+    def __init__(self):
         self.k = None
         self.b = None
         self.w = None
@@ -33,9 +37,11 @@ class FMRegressor:
         self.eta = None
 
     def _extract_feature_row(self, X, m):
-        if self.type_X == sparse.csr_matrix:
+        if isinstance(X, np.matrix):
+            return np.asarray(X)[m]
+        if isinstance(X, sparse.csr_matrix):
             return np.squeeze(np.asarray(X[m].todense()))
-        elif self.type_X == np.ndarray:
+        elif isinstance(X, np.ndarray):
             return X[m]
 
     def _initialize_params(self, n_features, k, l2):
@@ -45,12 +51,19 @@ class FMRegressor:
         self.w = np.zeros(n_features)
         self.V = np.random.normal(scale=1e-2, size=(n_features, k))
 
-    def _update_params(self, x, residue):
+    def _update_params(self, x: np.ndarray, error: float):
         """Update parameters using Stochastic Gradient Descent method.
+
+        Paramters
+        ---------
+        x : np.ndarray
+            A feature vector of an instance in training dataset.
+        error: float
+            A prediction error between observed and predicted values.
         """
         nonzero_ind = np.nonzero(x)[0]
-        self.b = self.b + self.eta * (residue - self.l2 * self.b)
-        self.w = self.w + self.eta * (residue * x - self.l2 * self.w)
+        self.b = self.b + self.eta * (error - self.l2 * self.b)
+        self.w = self.w + self.eta * (error * x - self.l2 * self.w)
         V_cur = self.V
         self.V -= self.l2 * self.V  # L2 Regularize in advance
         for f in range(self.k):
@@ -59,7 +72,7 @@ class FMRegressor:
                 x_i = x[i]
                 V_if = V_cur[i, f]
                 partial = x_i * shared_term - V_if * np.power(x_i, 2)
-                self.V[i, f] = V_if + self.eta * residue * partial
+                self.V[i, f] = V_if + self.eta * error * partial
 
     def __score(self, x):
         """A prediction with a given feature vector.
@@ -104,10 +117,12 @@ class FMRegressor:
 
         Parameters
         ----------
-        X_train : sparse.csr_matrix or ndarray,
-                  whose shape is (n_samples, n_features).
-        y_train : ndarray, whose shape is (n_samples, ).
-        n_iter  : The maximum number of iteration.
+        X_train : sparse.csr_matrix, np.ndarray or np.matrix
+            Its shape is (n_samples, n_features).
+        y_train : np.ndarray
+            Its shape is (n_samples, ).
+        n_iter : int
+            The maximum number of iteration.
         """
         n_samples, n_features = X_train.shape
         self._initialize_params(n_features, k, l2)
@@ -117,10 +132,10 @@ class FMRegressor:
         for _epoch in tqdm(range(n_iter)):
             np.random.shuffle(sample_indices)
             for m in sample_indices:
-                features = self._extract_feature_row(X_train, m)
+                x = self._extract_feature_row(X_train, m)
                 obs = y_train[m]
-                pred = self.__score(features)
-                self._update_params(features, obs - pred)
+                pred = self.__score(x)
+                self._update_params(x, obs - pred)
         # [END Fitting]
 
         return self

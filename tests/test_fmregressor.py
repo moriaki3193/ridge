@@ -34,15 +34,28 @@ class TestFMRegressor(unittest.TestCase):
         print(f'obs[0] : {y_test[0]}')
         print(f'obs[1] : {y_test[1]}')
 
+    def test_fitting_fm_with_matrix(self):
+        matrix_X = np.asmatrix(self.X)
+        X_train = matrix_X[0:5, :]
+        y_train = self.y[0:5]
+        X_test = matrix_X[5:, :]
+        y_test = self.y[5:]
+
+        print('Fitting FM with np.matrix')
+        model = FMRegressor().fit(X_train, y_train, k=4, n_iter=1000)
+        print(f'pred: {model.predict(X_test)}')
+        print(f'obs[0] : {y_test[0]}')
+        print(f'obs[1] : {y_test[1]}')
+
     def test_fitting_fm_with_csr_matrix(self):
         sparse_X = sparse.csr_matrix(self.X)
         X_train = sparse_X[0:5, :]
-        y_train = self.y[0:5, ]
+        y_train = self.y[0:5]
         X_test = sparse_X[5:, :]
         y_test = self.y[5:]
 
         print('Fitting FM with sparse.csr_matrix')
-        model = FMRegressor(type_X=sparse.csr_matrix).fit(X_train, y_train, k=4, n_iter=1000)
+        model = FMRegressor().fit(X_train, y_train, k=4, n_iter=1000)
         print(f'type of X_train: {type(X_train)}')
         print(f'pred: {model.predict(X_test)}')
         print(f'obs[0] : {y_test[0]}')
