@@ -2,8 +2,23 @@
 Python Machine Learning Library specialized in L2R and Recommendation.
 Named after my favorite racing game `R4`.
 
+[日本語のREADME](./README.ja.md)はこちら．
+
 ## Requirements
 - Python 3.6.0 ~
+- NumPy
+- Scipy
+
+## Implementation
+These models are available.
+
+| Class | Module | Description | Document |
+|:------|:-------|:------------|:---------|
+| FMRegressor | factorization_machines | Factorization Machine for regression tasks | [FMs](./docs/FactorizationMachines.md) |
+| FMClassifier | factorization_machines | Factorization Machine for classification tasks | [FMs](./docs/FactorizationMachines.md) |
+| MatFac | matrix_factorization | Ordinal Matrix Factorization | [MFs](./docs/MatrixFactorization.md) |
+| NNMatFac | matrix_factorization | Non-negative Matrix Factorization | [MFs](./docs/MatrixFactorization.md) |
+| ConditionalLogit | logit_models | Conditional Logistic Regression as a discrete choice model | [LMs](./docs/LogitModels.md) |
 
 ## Directories
 | name | descripiton |
