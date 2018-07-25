@@ -14,7 +14,7 @@ ext_modules = [
 
 setup(
     name='ridge',
-    version='0.0.5',
+    version='0.0.6',
     description='Python Machine Learning Library specialized in L2R and Recommendation.',
     author='Moriaki Saigusa',
     author_email='moriaki3193@gmail.com',
