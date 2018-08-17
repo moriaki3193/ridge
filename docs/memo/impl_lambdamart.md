@@ -1,4 +1,6 @@
 # Implementation of LambdaMART
+- 将来的にはPySparkを利用できるか否かで内部の挙動を変更できるようにする
+
 ## Questions
 - LambdaMARTでのRegressionTreeへの入力はなにか？
 - LambdaMARTでのRegressionTreeがFitするものはなにか？
@@ -15,25 +17,29 @@
 - すべてのドキュメントについてFn(x)を計算し、並び変えた結果を出力する。
 
 ## jobandtalent RankLib
-| step | sub step | description |
-|:-----|:---------|:------------|
-| 1 | - | 入力: |
-| 1 | a | ユーザ入力変数: `nTrees`, `nLeaves`, `learningRate` |
-| 1 | b | ローカル変数: `featureHist`, `ensembleTrees` |
-| 2 | - | for `m` in range(`nTrees`) |
-| - | a | pseudo response を計算[computePseudoResponses](computePseudoResponses)する |
-| - | b | 特徴量についてのヒストグラム(`featureHist`)を更新する　|
-| - | c | pseudo response, `featureHist` をもとに、RegressionTree `rt`を学習する |
-| - | d | `ensembleTrees`に、RegressionTree `rt`を`learningRate`に基づいて追加[ensemble.add](ensemble.add)する |
-| - | e | (Newton-Raphson法で計算されるγを使って)LambdaMARTとしての出力を更新[updateTreeOutput](updateTreeOutput)する |
-| - | f | RegressionTree `rt`のサンプルをクリアする |
-| - | g | 必要ならガーベジコレクションを動作させる |
-| - | h | トレーニングデータについてモデルのスコアを計算(し表示)する |
-| - | i | if `m` - bestModelOnValidationIdx > nRoundToStopEarly then 学習を終える |
-| 3 | - | while `ensembleTrees`.`treeCount` > `bestModelOnValidation + 1` |
-| - | a | `ensembleTrees`の末尾に存在するRegressionTreeインスタンスをPop |
-| 4 | - | 出力: |
-| 4 | a | 学習済みのモデル |
+- `x` : 分散処理できない
+- `o` : 分散処理可能
+- `◇` : Sparkに実装がある(のでそれを利用する部分)
+
+| Distributable? | step | sub step | description |
+|:---------------|:-----|:---------|:------------|
+| - | 1 | - | 入力: |
+| - | 1 | a | ユーザ入力変数: `nTrees`, `nLeaves`, `learningRate` |
+| - | 1 | b | ローカル変数: `featureHist`, `ensembleTrees` |
+| - | 2 | - | for `m` in range(`nTrees`) |
+| o | - | a | pseudo response を計算[computePseudoResponses](computePseudoResponses)する |
+| o | - | b | 特徴量についてのヒストグラム(`featureHist`)を更新する　|
+| ◇ | - | c | pseudo response, `featureHist` をもとに、RegressionTree `rt`を学習する |
+| - | - | d | `ensembleTrees`に、RegressionTree `rt`を`learningRate`に基づいて追加[ensemble.add](ensemble.add)する |
+| - | - | e | (Newton-Raphson法で計算されるγを使って)LambdaMARTとしての出力を更新[updateTreeOutput](updateTreeOutput)する |
+| x | - | f | RegressionTree `rt`のサンプルをクリアする |
+| x | - | g | 必要ならガーベジコレクションを動作させる |
+| o | - | h | トレーニングデータについてモデルのスコアを計算(し表示)する |
+| - | - | i | if `m` - bestModelOnValidationIdx > nRoundToStopEarly then 学習を終える |
+| - | 3 | - | while `ensembleTrees`.`treeCount` > `bestModelOnValidation + 1` |
+| - | - | a | `ensembleTrees`の末尾に存在するRegressionTreeインスタンスをPop |
+| - | 4 | - | 出力: |
+| o | 4 | a | 学習済みのモデル |
 
 ## computePseudoResponses
 スレッドの数に応じて並行処理を挟むかどうかの判断をしている。
@@ -50,7 +56,7 @@ def computePseudoResponses(startIdx: int, endIdx: int, current: int):
     for i in range(startIdx, endIdx + 1):
         # ?? orig → rl と変換を噛ませている理由 ??
         orig: RankList = samples.get(i)  # サンプルの単位は一つのクエリ結果
-        indices List[int] = MergeSorter.sort(modelScores, current, current + len(orig) - 1, False)  # スコアで並び替えた時のドキュメントのindexをリストで持っている
+        indices: List[int] = MergeSorter.sort(modelScores, current, current + len(orig) - 1, False)  # スコアで並び替えた時のドキュメントのindexをリストで持っている
         rl: RankList = RankList(orig, indices, current)
         changes: List[List[float]] = scorer.swapChange(rl)
         for j in range(len(rl)):
@@ -64,15 +70,15 @@ def computePseudoResponses(startIdx: int, endIdx: int, current: int):
                 p2: DataPoint = rl[k]  # ランキングのk番目のドキュメント
                 mk: int = indices[k]
                 if p1.getLabel() > p2.getLabel():
-                    deltaNDCG: = abs(changes[j][k])  # ← ERRとかの実装もできるように
+                    deltaNDCG: float = abs(changes[j][k])  # ← ERRとかの実装もできるように
                     if deltaNDCG > 0:
                         rho: float = 1.0 / (1 + np.exp(modelScores[mj] - modelScores[mk]))  # 論文p16下から2番目の式 lambdaの計算に利用する
                         lambda_ = rho * deltaNDCG  # p16下から3番目 損失をスコアで微分した結果
                         self.pseudoResponses[mj] += lambda_
                         self.pseudoResponses[mk] -= lambda_
                         delta: float = rho * (1 - rho) * deltaNDCG  # p16の1番下の式, この実装ではdeltaと呼んでいる
-                        weights[mj] += delta
-                        weights[mk] += delta
+                        self.weights[mj] += delta
+                        self.weights[mk] += delta
         current += len(orig)  # multi-threading の処理
 ```
 
