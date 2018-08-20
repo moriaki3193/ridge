@@ -3,6 +3,7 @@
 .DS_Store
 .vscode/
 /tests/tmp/
+/tests/data/MQ2007/Fold*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
