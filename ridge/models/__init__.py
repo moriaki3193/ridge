@@ -2,3 +2,4 @@
 from .logit_models import ConditionalLogit
 from .matrix_factorization import MatFac, NNMatFac
 from .factorization_machines import FMRegressor, FMClassifier
+from .originals import CDFMRegressor
